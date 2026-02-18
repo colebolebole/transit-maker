@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example Transit Authority</title>
+    <style>
+        /* --- CSS VARIABLES & THEMES --- */
+        :root {
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --primary: #003366;
+            --primary-hover: #004080;
+            --accent: #f4c430;
+            --border: #e1e4e8;
+            --input-bg: #ffffff;
+            --input-border: #d1d5db;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        [data-theme="dark"] {
+            --bg-body: #111827;
+            --bg-card: #1f2937;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #fbbf24;
+            --border: #374151;
+            --input-bg: #374151;
+            --input-border: #4b5563;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* --- HEADER --- */
+        header { background-color: var(--bg-card); color: var(--text-main); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .logo { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 12px; color: var(--primary); }
+        .logo span { color: var(--accent); }
+        nav ul { list-style: none; display: flex; gap: 20px; align-items: center; }
+        nav a { color: var(--text-main); text-decoration: none; font-weight: 500; font-size: 0.95rem; cursor: pointer; }
+        nav a:hover { color: var(--primary); }
+        .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-main); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; }
+
+        /* --- MAIN LAYOUT --- */
+        main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 3rem 1rem; }
+        .container { background: var(--bg-card); padding: 2.5rem; border-radius: 12px; box-shadow: var(--shadow); width: 100%; max-width: 500px; text-align: center; border: 1px solid var(--border); }
+        h1 { color: var(--text-main); margin-bottom: 0.5rem; font-size: 1.8rem; }
+        p.subtitle { color: var(--text-muted); margin-bottom: 2rem; line-height: 1.5; }
+
+        /* --- FORMS --- */
+        .search-group { margin-bottom: 1.25rem; text-align: left; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
+        input[type="text"], input[type="number"], input[type="password"], select { width: 100%; padding: 12px 16px; background-color: var(--input-bg); border: 1px solid var(--input-border); border-radius: 8px; font-size: 1rem; color: var(--text-main); }
+        input:focus { border-color: var(--primary); outline: 2px solid rgba(59, 130, 246, 0.2); }
+        button { background-color: var(--primary); color: white; border: none; padding: 12px 24px; font-size: 1rem; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 600; transition: transform 0.1s, background-color 0.2s; }
+        button:hover { background-color: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+        button.btn-danger { background-color: var(--danger); }
+        button.btn-danger:hover { background-color: #dc2626; }
+        button.btn-success { background-color: var(--success); }
+        button.btn-success:hover { background-color: #059669; }
+        button.secondary { background-color: transparent; border: 1px solid var(--border); color: var(--text-main); margin-top: 10px; }
+        button.secondary:hover { background-color: var(--border); }
+
+        /* --- RESULTS --- */
+        #result-area { margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 2rem; display: none; text-align: left; }
+        .card-visual { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; position: relative; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); }
+        .card-visual::after { content: "EXTA"; position: absolute; bottom: -15px; right: -10px; font-size: 5rem; opacity: 0.1; font-weight: 900; }
+        .balance-display { font-size: 2.5rem; font-weight: 800; color: var(--accent); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-decoration: none; }
+        .status-badge:hover { opacity: 0.9; }
+        
+        .details-list { list-style: none; margin-top: 1rem; }
+        .details-list li { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .details-list li:last-child { border-bottom: none; }
+        .error-msg { color: #f87171; background-color: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 8px; margin-top: 1rem; display: none; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+        /* --- ADMIN PANEL --- */
+        #admin-panel { display: none; width: 100%; max-width: 1000px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        
+        /* Admin Tabs */
+        .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border); width: auto; padding: 10px 20px; }
+        .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        .admin-content { display: none; }
+        .admin-content.active { display: block; }
+
+        .admin-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .admin-grid { grid-template-columns: 1fr; } }
+        .admin-card { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 14px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        th { background-color: var(--bg-body); color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .action-btn { padding: 6px 12px; font-size: 0.8rem; width: auto; margin-right: 5px; border-radius: 6px; }
+
+        /* --- MODAL --- */
+        #login-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .login-box { background: var(--bg-card); padding: 2.5rem; border-radius: 16px; width: 350px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid var(--border); }
+        
+        footer { background-color: var(--bg-card); color: var(--text-muted); text-align: center; padding: 1.5rem; margin-top: auto; border-top: 1px solid var(--border); }
+        .admin-link { color: var(--text-muted); font-size: 0.8rem; text-decoration: none; opacity: 0.5; transition: opacity 0.2s; }
+        .admin-link:hover { opacity: 1; color: var(--primary); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"></rect><path d="M3 6l2-3h14l2 3"></path><path d="M7 15h.01"></path><path d="M17 15h.01"></path></svg>
+            Example <span>Transit</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a onclick="showPage('public')">Lookup</a></li>
+                <li>
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
+                        <span id="theme-icon">🌙</span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- PUBLIC LOOKUP PAGE -->
+        <div id="public-page" class="container">
+            <h1>Check Balance</h1>
+            <p class="subtitle">Enter your EXTA Card ID below to view your current balance and recent travel history.</p>
+
+            <form id="lookup-form">
+                <div class="search-group">
+                    <label for="card-id">Card Number</label>
+                    <input type="text" id="card-id" placeholder="e.g., 1001" maxlength="6" required>
+                </div>
+                <button type="submit">Search Card</button>
+            </form>
+
+            <div id="error-message" class="error-msg">
+                <strong>Card not found.</strong> Please verify the number and try again.
+            </div>
+
+            <div id="result-area">
+                <div class="card-visual">
+                    <div style="font-size: 0.85rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">Available Balance</div>
+                    <div class="balance-display" id="display-balance">$0.00</div>
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-family: monospace; font-size: 1.1rem;" id="display-id">ID: 0000</span>
+                        <!-- Status is now a link if URL exists -->
+                        <a id="display-status-link" href="#" target="_blank" style="text-decoration: none;">
+                            <span class="status-badge" id="display-status">Active</span>
+                        </a>
+                    </div>
+                </div>
+                <h3 style="font-size: 1.1rem; margin-bottom: 10px;">Recent Activity</h3>
+                <ul class="details-list" id="activity-list"></ul>
+            </div>
+        </div>
+
+        <!-- ADMIN PANEL PAGE -->
+        <div id="admin-panel">
+            <div class="admin-header">
+                <div>
+                    <h2>Admin Dashboard</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Manage cards and system configuration</p>
+                </div>
+                <button onclick="logout()" class="btn-danger" style="width: auto;">Logout</button>
+            </div>
+
+            <!-- Admin Tabs -->
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="switchTab('cards')">Card Management</button>
+                <button class="tab-btn" onclick="switchTab('config')">Status Configuration</button>
+            </div>
+
+            <!-- Tab 1: Card Management -->
+            <div id="tab-cards" class="admin-content active">
+                <div class="admin-grid">
+                    <div class="admin-card">
+                        <h3>Registered Cards</h3>
+                        <div style="overflow-x: auto;">
+                            <table id="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Status</th>
+                                        <th>Balance</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="admin-card">
+                        <h3 id="form-title">Add New Card</h3>
+                        <form id="admin-form">
+                            <input type="hidden" id="edit-index" value="-1">
+                            <div class="search-group">
+                                <label>Card ID</label>
+                                <input type="text" id="admin-card-id" required>
+                            </div>
+                            <div class="search-group">
+                                <label>Initial Balance ($)</label>
+                                <input type="number" id="admin-balance" step="0.01" value="0.00" required>
+                            </div>
+                            <div class="search-group">
+                                <label>Status</label>
+                                <select id="admin-status" required>
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-success">Save Card</button>
+                            <button type="button" onclick="resetForm()" class="secondary">Cancel Edit</button>
+                        </form>
+
+                        <hr style="margin: 25px 0; border: 0; border-top: 1px solid var(--border);">
+
+                        <h4>Process Transaction</h4>
+                        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Select a card from the list to add a ride or top-up.</p>
+                        <form id="transaction-form">
+                            <div class="search-group">
+                                <label>Target Card ID</label>
+                                <input type="text" id="trans-card-id" readonly style="background:var(--bg-body); cursor: not-allowed;">
+                            </div>
+                            <div class="search-group">
+                                <label>Amount ($)</label>
+                                <input type="number" id="trans-amount" step="0.01" placeholder="-2.50 or 20.00" required>
+                                <small style="color:var(--text-muted); display:block; margin-top:4px;">Use negative (-) for rides, positive for top-ups.</small>
+                            </div>
+                            <div class="search-group">
+                                <label>Location/Desc</label>
+                                <input type="text" id="trans-loc" placeholder="e.g. Central Station" required>
+                            </div>
+                            <button type="submit" class="btn-success">Process Transaction</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Status Configuration -->
+            <div id="tab-config" class="admin-content">
+                <div class="admin-grid">
+                    <div class="admin-card">
+                        <h3>Status Definitions</h3>
+                        <p style="color:var(--text-muted); margin-bottom:15px; font-size:0.9rem;">Define the statuses available for cards. If a URL is provided, the status badge on the public page will be clickable.</p>
+                        <table id="config-table">
+                            <thead>
+                                <tr>
+                                    <th>Key (ID)</th>
+                                    <th>Display Name</th>
+                                    <th>Color</th>
+                                    <th>Link URL</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="config-table-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="admin-card">
+                        <h3 id="config-form-title">Add Status</h3>
+                        <form id="config-form">
+                            <input type="hidden" id="config-edit-key" value="">
+                            <div class="search-group">
+                                <label>Status Key (No spaces)</label>
+                                <input type="text" id="config-key" placeholder="e.g. active" required pattern="[a-zA-Z0-9]+">
+                            </div>
+                            <div class="search-group">
+                                <label>Display Name</label>
+                                <input type="text" id="config-name" placeholder="e.g. Active Member" required>
+                            </div>
+                            <div class="search-group">
+                                <label>Badge Color</label>
+                                <select id="config-color">
+                                    <option value="#10b981">Green (Success)</option>
+                                    <option value="#ef4444">Red (Danger)</option>
+                                    <option value="#f59e0b">Orange (Warning)</option>
+                                    <option value="#3b82f6">Blue (Info)</option>
+                                    <option value="#8b5cf6">Purple</option>
+                                    <option value="#6b7280">Gray</option>
+                                </select>
+                            </div>
+                            <div class="search-group">
+                                <label>Optional Link URL</label>
+                                <input type="text" id="config-url" placeholder="https://...">
+                                <small style="color:var(--text-muted); font-size:0.75rem;">Leave blank for no link.</small>
+                            </div>
+                            <button type="submit" class="btn-success">Save Status</button>
+                            <button type="button" onclick="resetConfigForm()" class="secondary">Cancel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="login-modal">
+        <div class="login-box">
+            <h3 style="margin-bottom: 1rem;">Staff Access</h3>
+            <p style="margin-bottom: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">Please enter your credentials.</p>
+            <form onsubmit="event.preventDefault(); checkLogin();">
+                <div class="search-group">
+                    <input type="password" id="admin-pass" placeholder="Password" required>
+                </div>
+                <button type="submit">Login</button>
+                <button type="button" onclick="closeLogin()" class="secondary">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Example Transit Authority.</p>
+        <p style="margin-top: 5px; font-size: 0.8rem;">1234 Any St, Anytown NY</p>
+        <div style="margin-top: 15px;">
+            <a href="#" class="admin-link" onclick="openLogin()">Admin Login</a>
+        </div>
+    </footer>
+
+    <script>
+        // --- THEME MANAGEMENT ---
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            const currentTheme = body.getAttribute('data-theme');
+            
+            if (currentTheme === 'dark') {
+                body.setAttribute('data-theme', 'light');
+                icon.innerText = '🌙';
+                localStorage.setItem('smta_theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                icon.innerText = '☀️';
+                localStorage.setItem('smta_theme', 'dark');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('smta_theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+                document.getElementById('theme-icon').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+            }
+            initDefaults();
+        });
+
+        // --- DATA MANAGEMENT ---
+        const defaultCards = [
+            { id: "1001", balance: 24.50, status: "active", history: [{date: "Oct 24", loc: "Central Station", amt: -2.50}] },
+            { id: "1002", balance: 0.00, status: "expired", history: [] },
+            { id: "1003", balance: 142.00, status: "gold", history: [] }
+        ];
+
+        const defaultStatuses = [
+            { key: "active", name: "Active", color: "#10b981", url: "" },
+            { key: "expired", name: "Expired", color: "#ef4444", url: "/renew" },
+            { key: "gold", name: "Gold Member", color: "#f59e0b", url: "/benefits" },
+            { key: "suspended", name: "Suspended", color: "#6b7280", url: "/appeal" }
+        ];
+
+        function initDefaults() {
+            if(!localStorage.getItem('smta_data')) localStorage.setItem('smta_data', JSON.stringify(defaultCards));
+            if(!localStorage.getItem('smta_statuses')) localStorage.setItem('smta_statuses', JSON.stringify(defaultStatuses));
+        }
+
+        function getCards() { return JSON.parse(localStorage.getItem('smta_data')); }
+        function saveCards(data) { localStorage.setItem('smta_data', JSON.stringify(data)); renderAdminTable(); }
+        
+        function getStatuses() { return JSON.parse(localStorage.getItem('smta_statuses')); }
+        function saveStatuses(data) { localStorage.setItem('smta_statuses', JSON.stringify(data)); renderConfigTable(); populateStatusDropdown(); }
+
+        function getStatusByKey(key) {
+            const statuses = getStatuses();
+            return statuses.find(s => s.key === key) || { name: key, color: "#6b7280", url: "" };
+        }
+
+        // --- PUBLIC PAGE LOGIC ---
+        const form = document.getElementById('lookup-form');
+        const resultArea = document.getElementById('result-area');
+        const errorMsg = document.getElementById('error-message');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const cardInput = document.getElementById('card-id').value.trim();
+            const data = getCards();
+            const card = data.find(c => c.id === cardInput);
+
+            resultArea.style.display = 'none';
+            errorMsg.style.display = 'none';
+
+            if (card) {
+                document.getElementById('display-balance').innerText = '$' + card.balance.toFixed(2);
+                document.getElementById('display-id').innerText = `ID: ${card.id}`;
+                
+                const statusDef = getStatusByKey(card.status);
+                const statusBadge = document.getElementById('display-status');
+                const statusLink = document.getElementById('display-status-link');
+
+                statusBadge.innerText = statusDef.name;
+                statusBadge.style.backgroundColor = statusDef.color + '33'; // Add transparency
+                statusBadge.style.color = statusDef.color;
+
+                if (statusDef.url) {
+                    statusLink.href = statusDef.url;
+                    statusLink.style.pointerEvents = 'auto';
+                    statusLink.style.cursor = 'pointer';
+                } else {
+                    statusLink.href = "#";
+                    statusLink.style.pointerEvents = 'none';
+                    statusLink.style.cursor = 'default';
+                }
+
+                const activityList = document.getElementById('activity-list');
+                activityList.innerHTML = '';
+                const recentHistory = [...card.history].reverse().slice(0, 5);
+                
+                if(recentHistory.length === 0) {
+                    activityList.innerHTML = '<li style="color:var(--text-muted); justify-content:center;">No recent activity</li>';
+                } else {
+                    recentHistory.forEach(item => {
+                        const li = document.createElement('li');
+                        const color = item.amt > 0 ? 'var(--success)' : 'var(--text-main)';
+                        const sign = item.amt > 0 ? '+' : '';
+                        li.innerHTML = `
+                            <div>
+                                <div style="font-weight:600;">${item.loc}</div>
+                                <div style="font-size:0.8rem; color:var(--text-muted);">${item.date}</div>
+                            </div>
+                            <div style="font-weight:bold; color:${color}">${sign}$${Math.abs(item.amt).toFixed(2)}</div>
+                        `;
+                        activityList.appendChild(li);
+                    });
+                }
+                resultArea.style.display = 'block';
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        });
+
+        function showPage(page) {
+            if(page === 'public') {
+                document.getElementById('public-page').style.display = 'block';
+                document.getElementById('admin-panel').style.display = 'none';
+            }
+        }
+
+        // --- ADMIN PANEL LOGIC ---
+        function openLogin() { document.getElementById('login-modal').style.display = 'flex'; }
+        function closeLogin() { document.getElementById('login-modal').style.display = 'none'; }
+        
+        function checkLogin() {
+            const pass = document.getElementById('admin-pass').value;
+            if(pass === 'admin') {
+                closeLogin();
+                document.getElementById('public-page').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                renderAdminTable();
+                renderConfigTable();
+                populateStatusDropdown();
+                document.getElementById('admin-pass').value = '';
+            } else {
+                alert('Incorrect Password');
+            }
+        }
+
+        function logout() {
+            document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('public-page').style.display = 'block';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.admin-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            // Find button that calls this function roughly
+            const buttons = document.querySelectorAll('.tab-btn');
+            if(tabName === 'cards') buttons[0].classList.add('active');
+            else buttons[1].classList.add('active');
+        }
+
+        // --- CARD MANAGEMENT ---
+        function renderAdminTable() {
+            const data = getCards();
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = '';
+
+            data.forEach((card, index) => {
+                const statusDef = getStatusByKey(card.status);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${card.id}</strong></td>
+                    <td><span class="status-badge" style="background:${statusDef.color}33; color:${statusDef.color}">${statusDef.name}</span></td>
+                    <td>$${card.balance.toFixed(2)}</td>
+                    <td>
+                        <button class="action-btn btn-success" onclick="prepEdit(${index})">Edit</button>
+                        <button class="action-btn btn-danger" onclick="deleteCard(${index})">Del</button>
+                        <button class="action-btn" style="background:var(--primary)" onclick="prepTransaction('${card.id}')">Trans</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function populateStatusDropdown() {
+            const select = document.getElementById('admin-status');
+            select.innerHTML = '';
+            const statuses = getStatuses();
+            statuses.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.key;
+                option.innerText = s.name;
+                select.appendChild(option);
+            });
+        }
+
+        document.getElementById('admin-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('admin-card-id').value;
+            const balance = parseFloat(document.getElementById('admin-balance').value);
+            const status = document.getElementById('admin-status').value;
+            const editIndex = document.getElementById('edit-index').value;
+
+            let data = getCards();
+
+            if (editIndex == "-1") {
+                if(data.find(c => c.id === id)) { alert('Card ID already exists!'); return; }
+                data.push({ id, balance, status, history: [] });
+            } else {
+                data[editIndex].id = id;
+                data[editIndex].balance = balance;
+                data[editIndex].status = status;
+            }
+
+            saveCards(data);
+            resetForm();
+        });
+
+        function prepEdit(index) {
+            const data = getCards();
+            const card = data[index];
+            document.getElementById('edit-index').value = index;
+            document.getElementById('admin-card-id').value = card.id;
+            document.getElementById('admin-balance').value = card.balance;
+            document.getElementById('admin-status').value = card.status;
+            document.getElementById('form-title').innerText = "Edit Card #" + card.id;
+        }
+
+        function deleteCard(index) {
+            if(confirm('Are you sure you want to delete this card?')) {
+                let data = getCards();
+                data.splice(index, 1);
+                saveCards(data);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('admin-form').reset();
+            document.getElementById('edit-index').value = "-1";
+            document.getElementById('form-title').innerText = "Add New Card";
+        }
+
+        function prepTransaction(cardId) {
+            document.getElementById('trans-card-id').value = cardId;
+            document.getElementById('trans-amount').focus();
+        }
+
+        document.getElementById('transaction-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const cardId = document.getElementById('trans-card-id').value;
+            const amount = parseFloat(document.getElementById('trans-amount').value);
+            const loc = document.getElementById('trans-loc').value;
+            
+            let data = getCards();
+            const cardIndex = data.findIndex(c => c.id === cardId);
+
+            if(cardIndex > -1) {
+                data[cardIndex].balance += amount;
+                const today = new Date();
+                const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                data[cardIndex].history.push({ date: dateStr, loc: loc, amt: amount });
+                saveCards(data);
+                alert('Transaction Successful!');
+                document.getElementById('transaction-form').reset();
+                document.getElementById('trans-card-id').value = '';
+            }
+        });
+
+        // --- STATUS CONFIGURATION ---
+        function renderConfigTable() {
+            const data = getStatuses();
+            const tbody = document.getElementById('config-table-body');
+            tbody.innerHTML = '';
+
+            data.forEach((status, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${status.key}</strong></td>
+                    <td>${status.name}</td>
+                    <td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${status.color};margin-right:5px;"></span>${status.color}</td>
+                    <td style="font-size:0.8rem; color:var(--text-muted);">${status.url || '-'}</td>
+                    <td>
+                        <button class="action-btn btn-success" onclick="prepConfigEdit('${status.key}')">Edit</button>
+                        <button class="action-btn btn-danger" onclick="deleteStatus('${status.key}')">Del</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('config-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const key = document.getElementById('config-key').value.toLowerCase().replace(/\s/g, '');
+            const name = document.getElementById('config-name').value;
+            const color = document.getElementById('config-color').value;
+            const url = document.getElementById('config-url').value;
+            const editKey = document.getElementById('config-edit-key').value;
+
+            let data = getStatuses();
+
+            if (editKey === "") {
+                if(data.find(s => s.key === key)) { alert('Status Key already exists!'); return; }
+                data.push({ key, name, color, url });
+            } else {
+                const index = data.findIndex(s => s.key === editKey);
+                if(index > -1) {
+                    // If key changed, check for conflicts
+                    if(key !== editKey && data.find(s => s.key === key)) {
+                        alert('New Status Key already exists!'); return;
+                    }
+                    data[index] = { key, name, color, url };
+                    
+                    // Update cards that used the old key
+                    let cards = getCards();
+                    cards.forEach(c => { if(c.status === editKey) c.status = key; });
+                    saveCards(cards);
+                }
+            }
+
+            saveStatuses(data);
+            resetConfigForm();
+        });
+
+        function prepConfigEdit(key) {
+            const data = getStatuses();
+            const status = data.find(s => s.key === key);
+            if(!status) return;
+
+            document.getElementById('config-edit-key').value = status.key;
+            document.getElementById('config-key').value = status.key;
+            document.getElementById('config-name').value = status.name;
+            document.getElementById('config-color').value = status.color;
+            document.getElementById('config-url').value = status.url;
+            document.getElementById('config-form-title').innerText = "Edit Status: " + status.name;
+        }
+
+        function deleteStatus(key) {
+            // Prevent deleting if cards are using it
+            const cards = getCards();
+            if(cards.some(c => c.status === key)) {
+                alert('Cannot delete status. Cards are currently using this status.');
+                return;
+            }
+
+            if(confirm('Are you sure you want to delete this status definition?')) {
+                let data = getStatuses();
+                data = data.filter(s => s.key !== key);
+                saveStatuses(data);
+            }
+        }
+
+        function resetConfigForm() {
+            document.getElementById('config-form').reset();
+            document.getElementById('config-edit-key').value = "";
+            document.getElementById('config-form-title').innerText = "Add Status";
+        }
+
+    </script>
+</body>
+</html>
