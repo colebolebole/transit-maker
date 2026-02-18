@@ -1,7 +1,9 @@
 # Transit Maker
 
 
-A simple website built for the use of checking card balances for public transit (In my case im using it on my minecraft server) it features a clean ui with dark mode, an admin panel where you can add cards, edit transactions & more! 
+A simple website built for the use of checking card balances for public transit (In my case im using it on my minecraft server) it features a clean ui with dark mode, an admin panel where you can add cards, edit transactions, export configurations & more!
+
+this project requires not even a webserver to work, it works fully offline and will be that way forever!
 
 an example can be found  <p><a href="https://exta.colebolebole.site/">Here</a>
 
